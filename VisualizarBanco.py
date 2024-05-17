@@ -52,6 +52,11 @@ class Aplicacao:
     def __init__(self, root):
         self.root = root
         self.root.title("Consulta Banco de Dados")
+        self.root['bg'] = '#d9d9d9'
+
+        largura_tela = root.winfo_screenwidth() - 100
+        altura_tela = root.winfo_screenheight() - 100
+        root.geometry(f"{largura_tela}x{altura_tela}+0+0")
 
         # Configurações do banco de dados
         self.gerenciador_bd = GerenciadorBancoDados(
@@ -61,31 +66,61 @@ class Aplicacao:
             database='better_call_test'
         )
 
+        def aumentar_botao(event):
+            event.widget.config(bg="#020c3e")
+
+        def restaurar_botao(event):
+            event.widget.config(bg="#1B2451")
+
         # Criando widgets
         self.label_tabela = tk.Label(root, text="Tabela:")
+
         self.entry_tabela = ttk.Combobox(root)
         self.entry_tabela.bind("<<ComboboxSelected>>", self.atualizar_colunas)
+        self.entry_tabela.bind("<KeyRelease>", self.filtrar_tabelas)
 
         self.label_coluna = tk.Label(root, text="Coluna (id):")
-        self.entry_coluna = ttk.Combobox(root)
 
-        self.botao_listar = tk.Button(root, text="Listar Elementos", command=self.listar_elementos)
+        self.entry_coluna = ttk.Combobox(root)
+        self.entry_coluna.bind("<KeyRelease>", self.filtrar_colunas)
+
+        self.botao_listar = tk.Button(root, text="Listar Elementos", command=self.listar_elementos, bg="#1B2451", fg="#d9d9d9", font=("Helvetica", 10, "bold"), borderwidth=0)
+        self.botao_listar.bind("<Enter>", aumentar_botao)
+        self.botao_listar.bind("<Leave>", restaurar_botao)
+
         self.botao_anterior = tk.Button(root, text="Página Anterior", command=self.pagina_anterior)
+
         self.botao_proxima = tk.Button(root, text="Próxima Página", command=self.proxima_pagina)
+
         self.lista_resultados = tk.Listbox(root, width=200, height=20, borderwidth=2)
 
         # Posicionando widgets
-        self.label_tabela.grid(row=0, column=0, padx=5, pady=5)
-        self.entry_tabela.grid(row=0, column=1, padx=10, pady=5)
-        self.label_coluna.grid(row=1, column=0, padx=10, pady=5)
-        self.entry_coluna.grid(row=1, column=1, padx=10, pady=5)
-        self.botao_listar.grid(row=2, column=0, columnspan=2, padx=10, pady=5)
-        self.botao_anterior.grid(row=3, column=0, padx=10, pady=5)
-        self.botao_proxima.grid(row=3, column=1, padx=10, pady=5)
-        self.lista_resultados.grid(row=4, column=0, columnspan=2, padx=10, pady=10)
+        self.label_tabela.grid(row=0, column=0, padx=20, pady=5, sticky='w')
+        self.entry_tabela.place(x=107, y=10)
+
+        self.label_coluna.grid(row=1, column=0, padx=20, pady=5, sticky='w')
+        self.entry_coluna.place(x=107, y=35)
+
+        self.botao_listar.grid(row=2, column=0, padx=20, pady=5, sticky='w')
+
+        self.botao_anterior.grid(row=3, column=0, padx=20, pady=5, sticky='w')
+        self.botao_proxima.grid(row=3, column=1, padx=20, pady=5, sticky='e')
+
+        self.lista_resultados.grid(row=4, column=0, columnspan=2, padx=20, pady=10, sticky='ew')
+
+        # Estilos widgets
+        self.label_tabela['bg'] = '#d9d9d9'
+        self.label_coluna['bg'] = '#d9d9d9'
+        self.entry_tabela.config(width=40)
+        self.entry_coluna.config(width=40)
+        self.botao_listar.config(width=43)
 
         # Inicializar variáveis
         self.pagina_atual = 0
+
+        # Armazenar todas as tabelas e colunas para filtragem
+        self.todas_tabelas = []
+        self.todas_colunas = []
 
         # Carregar nomes das tabelas no Combobox
         self.carregar_tabelas()
@@ -94,6 +129,7 @@ class Aplicacao:
         self.gerenciador_bd.conectar()
         tabelas = self.gerenciador_bd.listar_tabelas()
         self.gerenciador_bd.desconectar()
+        self.todas_tabelas = tabelas
         self.entry_tabela['values'] = tabelas
 
     def atualizar_colunas(self, event):
@@ -102,7 +138,26 @@ class Aplicacao:
             self.gerenciador_bd.conectar()
             colunas = self.gerenciador_bd.listar_colunas(tabela)
             self.gerenciador_bd.desconectar()
+            self.todas_colunas = colunas
             self.entry_coluna['values'] = colunas
+
+    def filtrar_tabelas(self, event):
+        valor = self.entry_tabela.get().lower()
+        if valor == '':
+            data = self.todas_tabelas
+        else:
+            data = [item for item in self.todas_tabelas if valor in item.lower()]
+        self.entry_tabela['values'] = data
+        self.entry_tabela.event_generate('<Down>')
+
+    def filtrar_colunas(self, event):
+        valor = self.entry_coluna.get().lower()
+        if valor == '':
+            data = self.todas_colunas
+        else:
+            data = [item for item in self.todas_colunas if valor in item.lower()]
+        self.entry_coluna['values'] = data
+        self.entry_coluna.event_generate('<Down>')
 
     def listar_elementos(self):
         tabela = self.entry_tabela.get()
@@ -112,7 +167,7 @@ class Aplicacao:
             total_elementos = self.gerenciador_bd.total_elementos(tabela)
             if total_elementos == 0:
                 self.gerenciador_bd.desconectar()
-                messagebox.showinfo("Informação", "Não há elementos nesta tabela.")
+                messagebox.showinfo("Aviso", "Não há elementos nesta tabela.")
                 return
 
             resultados = self.gerenciador_bd.listar_elementos(tabela, self.pagina_atual, coluna_id)
@@ -133,7 +188,7 @@ class Aplicacao:
             self.pagina_atual -= 1
             self.listar_elementos()
         else:
-            messagebox.showinfo("Informação", "Você está na primeira página.")
+            messagebox.showinfo("Aviso", "Você está na primeira página.")
 
 if __name__ == "__main__":
     root = tk.Tk()
