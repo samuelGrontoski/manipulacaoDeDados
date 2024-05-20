@@ -1,7 +1,10 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+from PIL import Image, ImageTk
 import pymysql.cursors
+import tkinter.font as tkFont
+
 
 class GerenciadorBancoDados:
     def __init__(self, host, user, password, database):
@@ -48,6 +51,7 @@ class GerenciadorBancoDados:
         total = self.cursor.fetchone()[0]
         return total
 
+
 class Aplicacao:
     def __init__(self, root):
         self.root = root
@@ -57,6 +61,7 @@ class Aplicacao:
         largura_tela = root.winfo_screenwidth() - 100
         altura_tela = root.winfo_screenheight() - 100
         root.geometry(f"{largura_tela}x{altura_tela}+0+0")
+        root.state('zoomed')
 
         # Configurações do banco de dados
         self.gerenciador_bd = GerenciadorBancoDados(
@@ -66,54 +71,127 @@ class Aplicacao:
             database='better_call_test'
         )
 
-        def aumentar_botao(event):
-            event.widget.config(bg="#020c3e")
-
-        def restaurar_botao(event):
-            event.widget.config(bg="#1B2451")
-
         # Criando widgets
-        self.label_tabela = tk.Label(root, text="Tabela:")
-
+        self.label_tabela = tk.Label(
+            root,
+            text="Tabela:"
+        )
         self.entry_tabela = ttk.Combobox(root)
-        self.entry_tabela.bind("<<ComboboxSelected>>", self.atualizar_colunas)
-        self.entry_tabela.bind("<KeyRelease>", self.filtrar_tabelas)
+        self.entry_tabela.bind(
+            "<<ComboboxSelected>>",
+            self.atualizar_colunas
+        )
+        self.entry_tabela.bind(
+            "<KeyRelease>",
+            self.filtrar_tabelas
+        )
 
-        self.label_coluna = tk.Label(root, text="Coluna (id):")
-
+        self.label_coluna = tk.Label(
+            root,
+            text="Coluna (id):"
+        )
         self.entry_coluna = ttk.Combobox(root)
-        self.entry_coluna.bind("<KeyRelease>", self.filtrar_colunas)
+        self.entry_coluna.bind(
+            "<KeyRelease>",
+            self.filtrar_colunas
+        )
 
-        self.botao_listar = tk.Button(root, text="Listar Elementos", command=self.listar_elementos, bg="#1B2451", fg="#d9d9d9", font=("Helvetica", 10, "bold"), borderwidth=0)
-        self.botao_listar.bind("<Enter>", aumentar_botao)
-        self.botao_listar.bind("<Leave>", restaurar_botao)
+        self.botao_listar = tk.Button(
+            root,
+            text="Listar Elementos",
+            command=self.listar_elementos
+        )
 
-        self.botao_anterior = tk.Button(root, text="Página Anterior", command=self.pagina_anterior)
+        # Carregar imagem
+        seta_esquerda_img = Image.open('./assets/seta_esquerda.png')
+        seta_esquerda_img = seta_esquerda_img.resize((10, 10), Image.ANTIALIAS)
+        # Converter para incluir canal alfa
+        seta_esquerda_img = seta_esquerda_img.convert("RGBA")
+        # Adicionar fundo
+        bg_color = (217, 217, 217)  # Cor #d9d9d9 em RGB
+        seta_esquerda_img_with_bg = Image.new('RGBA', seta_esquerda_img.size, bg_color)
+        seta_esquerda_img_with_bg.paste(seta_esquerda_img, (0, 0), seta_esquerda_img)
+        self.seta_esquerda_photo = ImageTk.PhotoImage(seta_esquerda_img_with_bg)
 
-        self.botao_proxima = tk.Button(root, text="Próxima Página", command=self.proxima_pagina)
+        self.botao_anterior = tk.Button(
+            root,
+            text="",
+            command=self.pagina_anterior,
+            image=self.seta_esquerda_photo,
+            compound=tk.LEFT
+        )
 
-        self.lista_resultados = tk.Listbox(root, width=200, height=20, borderwidth=2)
+        # Carregar imagem
+        seta_direita_img = Image.open('./assets/seta_direita.png')
+        seta_direita_img = seta_direita_img.resize((10, 10), Image.ANTIALIAS)
+        # Converter para incluir canal alfa
+        seta_direita_img = seta_direita_img.convert("RGBA")
+        # Adicionar fundo
+        bg_color = (217, 217, 217)  # Cor #d9d9d9 em RGB
+        seta_direita_img_with_bg = Image.new('RGBA', seta_direita_img.size, bg_color)
+        seta_direita_img_with_bg.paste(seta_direita_img, (0, 0), seta_direita_img)
+        self.seta_direita_photo = ImageTk.PhotoImage(seta_direita_img_with_bg)
+
+        self.botao_proxima = tk.Button(
+            root,
+            text="",
+            command=self.proxima_pagina,
+            image=self.seta_direita_photo,
+            compound=tk.LEFT
+        )
+
+        self.criadores = tk.Label(
+            root,
+            text="Desenvolvido por Marcos Tullio Silva de Souza e Samuel Grontoski"
+        )
+
+        # Criando Treeview
+        self.tree_resultados = ttk.Treeview(
+            root,
+            show='headings'
+        )
+        self.scrollbar_y = ttk.Scrollbar(
+            root,
+            orient='vertical',
+            command=self.tree_resultados.yview
+        )
+        self.scrollbar_x = ttk.Scrollbar(
+            root, orient='horizontal',
+            command=self.tree_resultados.xview
+        )
+        self.tree_resultados.configure(
+            yscroll=self.scrollbar_y.set,
+            xscrollcommand=self.scrollbar_x.set
+        )
+        self.frame_treeview = tk.Frame(root)
+        self.frame_treeview.place(x=20, y=150)
 
         # Posicionando widgets
-        self.label_tabela.grid(row=0, column=0, padx=20, pady=5, sticky='w')
-        self.entry_tabela.place(x=107, y=10)
+        self.label_tabela.grid(row=0, column=0, padx=30, pady=5, sticky='w')
+        self.entry_tabela.grid(row=0, column=1, padx=30, pady=5, sticky='w')
 
-        self.label_coluna.grid(row=1, column=0, padx=20, pady=5, sticky='w')
-        self.entry_coluna.place(x=107, y=35)
+        self.label_coluna.grid(row=1, column=0, padx=30, pady=5, sticky='w')
+        self.entry_coluna.grid(row=1, column=1, padx=30, pady=5, sticky='w')
 
-        self.botao_listar.grid(row=2, column=0, padx=20, pady=5, sticky='w')
+        self.botao_listar.grid(row=2, column=0, columnspan=2, padx=30, pady=5, sticky='ew')
+        self.botao_anterior.place(x=1160, y=560)
+        self.botao_proxima.place(x=1200, y=560)
 
-        self.botao_anterior.grid(row=3, column=0, padx=20, pady=5, sticky='w')
-        self.botao_proxima.grid(row=3, column=1, padx=20, pady=5, sticky='e')
+        self.criadores.place(x=30, y=660)
 
-        self.lista_resultados.grid(row=4, column=0, columnspan=2, padx=20, pady=10, sticky='ew')
+        self.tree_resultados.place(x=30, y=150, height=400, width=1200)
+        self.scrollbar_y.place(x=0 + self.tree_resultados.winfo_reqwidth(), y=150, height=400)
+        self.scrollbar_x.place(x=30, y=560, width=400)
 
         # Estilos widgets
-        self.label_tabela['bg'] = '#d9d9d9'
-        self.label_coluna['bg'] = '#d9d9d9'
+        self.label_tabela.config(font=("Helvetica", 10, "bold"), background='#d9d9d9')
+        self.label_coluna.config(font=("Helvetica", 10, "bold"), background='#d9d9d9')
         self.entry_tabela.config(width=40)
         self.entry_coluna.config(width=40)
-        self.botao_listar.config(width=43)
+        self.botao_listar.config(bg="#1B2451", fg="#d9d9d9", font=("Helvetica", 10, "bold"), borderwidth=0, cursor="hand2")
+        self.botao_anterior.config(cursor="hand2", borderwidth=0, background='#d9d9d9')
+        self.botao_proxima.config(cursor="hand2", borderwidth=0, background='#d9d9d9')
+        self.criadores.config(font=("Helvetica", 10, "bold"), background='#d9d9d9')
 
         # Inicializar variáveis
         self.pagina_atual = 0
@@ -171,11 +249,26 @@ class Aplicacao:
                 return
 
             resultados = self.gerenciador_bd.listar_elementos(tabela, self.pagina_atual, coluna_id)
+            colunas = self.gerenciador_bd.listar_colunas(tabela)
             self.gerenciador_bd.desconectar()
 
-            self.lista_resultados.delete(0, tk.END)
+            self.tree_resultados.delete(*self.tree_resultados.get_children())
+            self.tree_resultados["columns"] = colunas
+            for col in colunas:
+                self.tree_resultados.heading(col, text=col)
+
+            # Ajustar largura das colunas
+            font = tkFont.Font()
+            for col in colunas:
+                max_width = font.measure(col)
+                for row in resultados:
+                    item_width = font.measure(str(row[colunas.index(col)]))
+                    if item_width > max_width:
+                        max_width = item_width
+                self.tree_resultados.column(col, width=max_width + 5, anchor=tk.CENTER)
+
             for resultado in resultados:
-                self.lista_resultados.insert(tk.END, resultado)
+                self.tree_resultados.insert("", "end", values=resultado)
         else:
             messagebox.showerror("Erro", "Por favor, insira o nome da tabela.")
 
@@ -189,6 +282,7 @@ class Aplicacao:
             self.listar_elementos()
         else:
             messagebox.showinfo("Aviso", "Você está na primeira página.")
+
 
 if __name__ == "__main__":
     root = tk.Tk()
