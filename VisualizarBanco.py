@@ -174,8 +174,8 @@ class Aplicacao:
         self.entry_coluna.grid(row=1, column=1, padx=30, pady=5, sticky='w')
 
         self.botao_listar.grid(row=2, column=0, columnspan=2, padx=30, pady=5, sticky='ew')
-        self.botao_anterior.place(x=1160, y=560)
-        self.botao_proxima.place(x=1200, y=560)
+        self.botao_anterior.place(x=600, y=560)
+        self.botao_proxima.place(x=640, y=560)
 
         self.criadores.place(x=30, y=660)
 
